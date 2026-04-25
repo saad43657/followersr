@@ -1,1 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Iron Man Jarvis AI</title>
 
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      background: radial-gradient(circle at center, #000 0%, #001a1a 40%, #000 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* 🌌 HUD GRID */
+    body::before {
+      content: "";
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(#00ffcc10 1px, transparent 1px),
+                  linear-gradient(90deg, #00ffcc10 1px, transparent 1px);
+      background-size: 50px 50px;
+      opacity: 0.2;
+    }
+
+    /* 🔵 IRON MAN CORE CIRCLE */
+    #core {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00ffcc, #001);
+      box-shadow:
+        0 0 30px #00ffcc,
+        0 0 60px #00ffcc,
+        0 0 100px #00ffcc;
+      animation: pulse 1.2s infinite;
+      z-index: 2;
+    }
+
+    /* ⚡ PULSE EFFECT */
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.7; }
+      50% { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.7; }
+    }
+
+    /* 🔴 listening effect */
+    .active {
+      box-shadow:
+        0 0 40px #ff0040,
+        0 0 80px #ff0040,
+        0 0 120px #ff0040;
+      background: radial-gradient(circle, #ff0040, #200);
+    }
+  </style>
+</head>
+
+<body>
+
+<div id="core"></div>
+
+<script>
+
+const core = document.getElementById("core");
+
+// 🔊 SPEAK FUNCTION
+function speak(text){
+  let msg = new SpeechSynthesisUtterance(text);
+  msg.lang = "en-US";
+  msg.rate = 1;
+  speechSynthesis.speak(msg);
+}
+
+// 🤖 CHATGPT CONNECT
+async function askAI(text){
+
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+
+        // ⚠️ PUT YOUR API KEY HERE
+        "Authorization": "Bearer YOUR_API_KEY_HERE"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are JARVIS like Iron Man. Speak short, smart, futuristic." },
+          { role: "user", content: text }
+        ]
+      })
+    });
+
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content;
+
+  } catch (e) {
+    return "Connection unstable, sir.";
+  }
+}
+
+// 🎤 VOICE INPUT
+function startJarvis(){
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  const rec = new SpeechRecognition();
+  rec.lang = "en-US";
+  rec.continuous = true;
+
+  rec.onstart = () => {
+    core.classList.add("active");
+    speak("Jarvis online");
+  };
+
+  rec.onend = () => rec.start();
+
+  rec.onresult = async (e) => {
+
+    let text = e.results[e.results.length - 1][0].transcript.toLowerCase();
+
+    if(!text.includes("jarvis")) return;
+
+    text = text.replace("jarvis","").trim();
+
+    let reply = await askAI(text);
+
+    if(!reply) reply = "I didn't get that, sir.";
+
+    speak(reply);
+  };
+
+  rec.start();
+}
+
+startJarvis();
+
+</script>
+
+</body>
+</html>
