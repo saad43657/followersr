@@ -1,1 +1,200 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Java Jarvis AI</title>
+  <style>
+    body {
+      background: radial-gradient(circle, #000, #001a1a);
+      color: #00ffcc;
+      font-family: Arial;
+      text-align: center;
+      padding-top: 40px;
+    }
 
+    h1 {
+      font-size: 40px;
+      letter-spacing: 2px;
+    }
+
+    #orb {
+      width: 140px;
+      height: 140px;
+      margin: 30px auto;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00ffcc, #001);
+      animation: pulse 1.5s infinite;
+      box-shadow: 0 0 30px #00ffcc;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); opacity: 0.6; }
+      50% { transform: scale(1.25); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.6; }
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 18px;
+      background: #00ffcc;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      margin: 10px;
+    }
+
+    #chat {
+      max-width: 600px;
+      margin: auto;
+      text-align: left;
+      white-space: pre-line;
+      padding: 20px;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🤖 Java Jarvis AI</h1>
+<div id="orb"></div>
+
+<button onclick="startWake()">🎤 Start Listening (Hey Java)</button>
+<button onclick="clearMemory()">🧠 Reset Memory</button>
+
+<div id="chat"></div>
+
+<script>
+const chatDiv = document.getElementById("chat");
+
+// 🧠 MEMORY SYSTEM
+let memory = JSON.parse(localStorage.getItem("java_memory") || "[]");
+
+// 🧠 SYSTEM MESSAGE
+let messages = [
+  { role: "system", content: "Your name is Java. You are a smart AI assistant. You can speak English, Urdu, and Hindi. Be helpful and natural." }
+];
+
+// save memory
+function saveMemory() {
+  localStorage.setItem("java_memory", JSON.stringify(memory));
+}
+
+// display chat
+function add(text) {
+  chatDiv.innerText += text + "\n\n";
+}
+
+// 🔊 SPEAK (Urdu/Hindi support basic)
+function speak(text) {
+  const speech = new SpeechSynthesisUtterance(text);
+  speech.lang = "en-US";
+  speechSynthesis.speak(speech);
+}
+
+// 📱 PHONE CONTROL (Tasker bridge)
+function sendToPhone(cmd) {
+  fetch("http://YOUR_PHONE_IP:1880/command", {
+    method: "POST",
+    body: JSON.stringify({ cmd })
+  });
+}
+
+// 🎤 WAKE WORD SYSTEM (simulated continuous listening)
+function startWake() {
+  const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+  recognition.lang = "en-US";
+  recognition.continuous = true;
+
+  recognition.onresult = async (event) => {
+
+    let text = event.results[event.results.length - 1][0].transcript.toLowerCase();
+
+    if (!text.includes("java")) return; // wake word filter
+
+    text = text.replace("java", "").trim();
+
+    add("👤 You: " + text);
+
+    // 🧠 save memory
+    memory.push(text);
+    saveMemory();
+
+    // 📱 phone commands
+    if (text.includes("open whatsapp")) {
+      speak("Opening WhatsApp");
+      sendToPhone("open_whatsapp");
+      return;
+    }
+
+    if (text.includes("wifi on")) {
+      speak("Turning WiFi on");
+      sendToPhone("wifi_on");
+      return;
+    }
+
+    if (text.includes("sms")) {
+      speak("Sending SMS");
+      sendToPhone("send_sms");
+      return;
+    }
+
+    // 🔍 SEARCH
+    if (text.includes("search")) {
+      let q = text.replace("search", "").trim();
+      speak("Searching " + q);
+      window.open("https://google.com/search?q=" + q);
+      return;
+    }
+
+    // ▶️ YOUTUBE
+    if (text.includes("youtube")) {
+      let q = text.replace("youtube", "").replace("search", "").trim();
+      speak("Opening YouTube");
+      window.open("https://youtube.com/results?search_query=" + q);
+      return;
+    }
+
+    // 🧠 AI RESPONSE
+    const reply = await askAI(text);
+
+    add("🤖 Java: " + reply);
+    speak(reply);
+  };
+
+  recognition.start();
+}
+
+// 🧠 CHATGPT API
+async function askAI(input) {
+
+  messages.push({ role: "user", content: input });
+
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": "Bearer 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"
+    },
+    body: JSON.stringify({
+      model: "gpt-4o-mini",
+      messages: messages
+    })
+  });
+
+  const data = await res.json();
+  const reply = data.choices[0].message.content;
+
+  messages.push({ role: "assistant", content: reply });
+
+  return reply;
+}
+
+// 🧹 RESET MEMORY
+function clearMemory() {
+  localStorage.removeItem("java_memory");
+  memory = [];
+  add("🧠 Memory cleared");
+}
+</script>
+
+</body>
+</html>
