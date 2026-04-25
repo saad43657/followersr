@@ -1,1 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Java AI Assistant</title>
 
+  <style>
+    body {
+      margin: 0;
+      background: radial-gradient(circle, #000, #001a1a);
+      color: #00ffcc;
+      font-family: Arial;
+      text-align: center;
+      padding-top: 50px;
+    }
+
+    h1 {
+      font-size: 36px;
+    }
+
+    #orb {
+      width: 140px;
+      height: 140px;
+      margin: 20px auto;
+      border-radius: 50%;
+      background: radial-gradient(circle, #00ffcc, #001);
+      animation: pulse 1.5s infinite;
+      box-shadow: 0 0 25px #00ffcc;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.3); }
+      100% { transform: scale(1); }
+    }
+
+    button {
+      padding: 12px 20px;
+      margin: 10px;
+      background: #00ffcc;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    #chat {
+      max-width: 650px;
+      margin: auto;
+      text-align: left;
+      padding: 20px;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>🤖 Java AI Assistant</h1>
+<div id="orb"></div>
+
+<button onclick="startAI()">🎤 Start Listening</button>
+
+<div id="chat"></div>
+
+<script>
+const chat = document.getElementById("chat");
+
+// 🧠 show text
+function add(text) {
+  chat.innerHTML += text + "<br><br>";
+}
+
+// 🔊 speak
+function speak(text) {
+  const msg = new SpeechSynthesisUtterance(text);
+  msg.lang = "en-US";
+  msg.rate = 1;
+  speechSynthesis.speak(msg);
+}
+
+// 🤖 AI CALL (PUT YOUR KEY HERE)
+async function askAI(message) {
+  try {
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+
+        // ⚠️ ADD YOUR API KEY HERE
+        "Authorization": "Bearer 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"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: "You are Java, a helpful AI assistant inside a web app. Keep answers short." },
+          { role: "user", content: message }
+        ]
+      })
+    });
+
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content || "No response";
+
+  } catch (e) {
+    return "AI error or internet issue.";
+  }
+}
+
+// 🎤 VOICE SYSTEM
+function startAI() {
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("Speech Recognition not supported in this browser");
+    return;
+  }
+
+  const rec = new SpeechRecognition();
+  rec.lang = "en-US";
+  rec.continuous = true;
+  rec.interimResults = false;
+
+  rec.onstart = () => add("🎤 Listening started...");
+
+  rec.onresult = async (e) => {
+
+    let text = e.results[e.results.length - 1][0].transcript.toLowerCase();
+
+    add("👤 You: " + text);
+
+    // 🧠 WAKE WORD
+    if (!text.includes("java")) return;
+
+    text = text.replace("java", "").trim();
+
+    // ⚡ COMMANDS
+    if (text.includes("time")) {
+      let t = new Date().toLocaleTimeString();
+      add("🤖 Java: " + t);
+      speak(t);
+      return;
+    }
+
+    if (text.includes("open youtube")) {
+      speak("Opening YouTube");
+      window.open("https://youtube.com");
+      return;
+    }
+
+    if (text.includes("open google")) {
+      speak("Opening Google");
+      window.open("https://google.com");
+      return;
+    }
+
+    // 🤖 AI RESPONSE
+    let reply = await askAI(text);
+
+    add("🤖 Java: " + reply);
+    speak(reply);
+  };
+
+  // 🔁 IMPORTANT FIX (auto restart listening)
+  rec.onend = () => {
+    rec.start();
+  };
+
+  rec.start();
+}
+</script>
+
+</body>
+</html>
